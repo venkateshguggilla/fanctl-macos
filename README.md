@@ -30,8 +30,9 @@ CPU and fan 1 the GPU in Curve mode.
 
 ## Status
 
-Sensor reading is verified on a MacBookPro16,1 running macOS 26. Writing fan speeds
-(`F<n>Md` = 1 plus `F<n>Tg`) has not yet been confirmed on hardware through the helper.
+Verified on a MacBookPro16,1 running macOS 26: sensor reading, and manual fan control
+through the helper (`F<n>Md` = 1 plus `F<n>Tg`; fan 0 reached a 3000 rpm target in about
+8 seconds and returned to Auto on `auto 0`).
 
 ## Layout
 
