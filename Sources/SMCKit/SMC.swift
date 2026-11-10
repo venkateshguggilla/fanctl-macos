@@ -33,6 +33,16 @@ public final class SMC {
         return key.withCString { smc_key_info($0, &info) } == 0
     }
 
+    /// Every key name the SMC exposes (a few thousand on Apple Silicon).
+    public func allKeys() -> [String] {
+        guard let count = readDouble("#KEY") else { return [] }
+        lock.lock(); defer { lock.unlock() }
+        var name = [CChar](repeating: 0, count: 5)
+        return (0..<UInt32(count)).compactMap { i in
+            smc_key_at(i, &name) == 0 ? String(cString: name) : nil
+        }
+    }
+
     public func read(_ key: String) -> (type: String, bytes: [UInt8])? {
         lock.lock(); defer { lock.unlock() }
         return readUnlocked(key)

@@ -18,7 +18,7 @@ typedef struct {
 
 _Static_assert(sizeof(SMCParam) == 80, "SMCParam must be 80 bytes");
 
-enum { kSMCHandleYPCEvent = 2, kSMCReadKey = 5, kSMCWriteKey = 6, kSMCGetKeyInfo = 9 };
+enum { kSMCHandleYPCEvent = 2, kSMCReadKey = 5, kSMCWriteKey = 6, kSMCGetKeyFromIndex = 8, kSMCGetKeyInfo = 9 };
 
 static io_connect_t conn;
 
@@ -85,4 +85,15 @@ int smc_write(const char *key, const uint8_t *data, uint32_t len) {
     in.data8 = kSMCWriteKey;
     memcpy(in.bytes, data, len);
     return call(&in, &out);
+}
+
+int smc_key_at(uint32_t index, char *out5) {
+    SMCParam in = {0}, out = {0};
+    in.data8 = kSMCGetKeyFromIndex;
+    in.data32 = index;
+    int r = call(&in, &out);
+    if (r) return r;
+    for (int i = 0; i < 4; i++) out5[i] = (char)(out.key >> (24 - 8 * i));
+    out5[4] = 0;
+    return 0;
 }

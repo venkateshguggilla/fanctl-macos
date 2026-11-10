@@ -61,10 +61,33 @@ public enum Sensors {
 
     public static func temps() -> [TempReading] {
         var seenLabels = Set<String>()
-        return tempKeys.compactMap { entry in
+        let named: [TempReading] = tempKeys.compactMap { entry in
             guard let v = SMC.shared.readDouble(entry.key), v > 0, v < 130,
                   seenLabels.insert(entry.label).inserted else { return nil }
             return TempReading(key: entry.key, label: entry.label, group: entry.group, value: v)
+        }
+        return named.isEmpty ? discoveredTemps() : named
+    }
+
+    /// Apple Silicon has no fixed CPU/GPU keys: core sensors are Tp*/Te* (P/E cores) and Tg* (GPU),
+    /// and the set differs per chip. Report the hottest sensor in each group.
+    static let discoveredKeys: [SensorGroup: [String]] = {
+        var groups: [SensorGroup: [String]] = [:]
+        for key in SMC.shared.allKeys() {
+            let prefix = key.prefix(2)
+            let group: SensorGroup? = (prefix == "Tp" || prefix == "Te") ? .cpu : prefix == "Tg" ? .gpu : nil
+            if let group, SMC.shared.read(key)?.type == "flt " {
+                groups[group, default: []].append(key)
+            }
+        }
+        return groups
+    }()
+
+    public static func discoveredTemps() -> [TempReading] {
+        SensorGroup.allCases.compactMap { group in
+            let values = (discoveredKeys[group] ?? []).compactMap { SMC.shared.readDouble($0) }.filter { $0 > 0 && $0 < 130 }
+            guard let hottest = values.max() else { return nil }
+            return TempReading(key: "\(group.rawValue)*", label: "\(group.rawValue) (hottest)", group: group, value: hottest)
         }
     }
 }

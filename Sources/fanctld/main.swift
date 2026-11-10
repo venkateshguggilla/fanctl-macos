@@ -35,6 +35,7 @@ if args.contains("--probe") {
         print("\(t.key) \(t.label): \(String(format: "%.1f", t.value)) C")
     }
     print("Ftst key present: \(smc.has("Ftst"))")
+    print("Apple Silicon-style sensors: \(Sensors.discoveredTemps().map { "\($0.label) \(String(format: "%.1f", $0.value)) C" })")
     exit(0)
 }
 
@@ -95,12 +96,22 @@ final class FanControl {
     private func apply(fan: Int, rpm: Double) throws {
         let modeKey = "F\(fan)Md"
         if smc.readDouble(modeKey) != 1 {
-            try smc.write(modeKey, 1)
-            // Some firmware ignores F<n>Md until the test-mode key is set.
-            if smc.readDouble(modeKey) != 1, smc.has("Ftst") {
+            let accepted = (try? smc.write(modeKey, 1)) != nil && smc.readDouble(modeKey) == 1
+            if !accepted {
+                // Apple Silicon: F<n>Md is refused until the test-mode key Ftst is set, and
+                // thermalmonitord can take a few seconds to let go after that.
+                guard smc.has("Ftst") else { throw Failure("fan \(fan) refused manual mode") }
                 try smc.write("Ftst", 1)
                 usedFtst = true
-                try smc.write(modeKey, 1)
+                var unlocked = false
+                for _ in 0..<20 {
+                    if (try? smc.write(modeKey, 1)) != nil, smc.readDouble(modeKey) == 1 {
+                        unlocked = true
+                        break
+                    }
+                    usleep(500_000)
+                }
+                guard unlocked else { throw Failure("fan \(fan) refused manual mode") }
             }
         }
         try smc.write("F\(fan)Tg", rpm)
@@ -110,7 +121,8 @@ final class FanControl {
         do { try smc.write("F\(fan)Md", 0) } catch { log("restore fan \(fan): \(error)") }
         desired[fan] = nil
         owners[fan] = nil
-        if desired.isEmpty && usedFtst {
+        // Also clears an Ftst left set by a previous run that crashed.
+        if desired.isEmpty && (usedFtst || smc.readDouble("Ftst") == 1) {
             try? smc.write("Ftst", 0)
             usedFtst = false
         }

@@ -46,7 +46,9 @@ final class HelperClient {
     private func connect() -> Bool {
         let s = socket(AF_UNIX, SOCK_STREAM, 0)
         guard s >= 0 else { return false }
-        var timeout = timeval(tv_sec: 2, tv_usec: 0)
+        // Long enough for fanctld's Apple Silicon unlock retries (up to ~10 s); timing out
+        // closes the socket, which makes fanctld return our fans to Auto.
+        var timeout = timeval(tv_sec: 15, tv_usec: 0)
         setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         var on: Int32 = 1

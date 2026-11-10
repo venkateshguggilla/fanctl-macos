@@ -1,0 +1,12 @@
+#!/bin/sh
+# Runs as root after FanCtl.app lands in /Applications: (re)installs the fanctld LaunchDaemon
+# for the logged-in user, then opens the app for them.
+APP=/Applications/FanCtl.app
+USER_UID=$(stat -f %u /dev/console)
+
+/bin/sh "$APP/Contents/Resources/install-helper.sh" "$APP/Contents/Resources" "$USER_UID" || exit 1
+
+if [ "$USER_UID" != 0 ]; then
+    launchctl asuser "$USER_UID" /usr/bin/open "$APP" || true
+fi
+exit 0

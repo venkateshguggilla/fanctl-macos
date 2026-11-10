@@ -30,6 +30,11 @@ struct ContentView: View {
 
             temperatures
 
+            if controller.fans.isEmpty {
+                Text("This Mac has no fans the SMC lets software control.")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+
             ForEach(controller.fans, id: \.id) { fan in
                 if fan.id < controller.settings.count {
                     FanCard(fan: fan, setting: $controller.settings[fan.id])

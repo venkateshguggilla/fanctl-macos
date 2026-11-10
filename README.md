@@ -1,25 +1,34 @@
 # FanCtl (macOS)
 
-Menu-bar fan control for the MacBook Pro 16" 2019 (MacBookPro16,1, Intel + T2).
+Menu-bar fan control for Macs: CPU/GPU temperatures plus Auto, Manual and
+temperature-curve modes per fan. Universal binary for Apple Silicon and Intel, macOS 13+.
+
+## Install
+
+1. Download `FanCtl-<version>.pkg` from the
+   [latest release](https://github.com/venkateshguggilla/fanctl-macos/releases/latest)
+   and open it. The installer puts `FanCtl.app` in `/Applications`, installs the root
+   helper, and starts the app.
+2. Click the fan icon in the menu bar.
+3. Per fan pick **Auto**, **Manual** (fixed RPM) or **Curve** (min speed at the low
+   temperature → max speed at the high one, following CPU or GPU temperature).
+
+In Curve mode fan 0 follows the CPU and any other fan the GPU by default. Fanless Macs
+(e.g. MacBook Air) show temperatures only.
+
+To uninstall: **Helper → Uninstall…** in the panel, then delete `/Applications/FanCtl.app`.
 
 ## Build
 
 ```sh
-./build.sh          # -> build/FanCtl.app
+./build.sh          # -> build/FanCtl.app (universal, Developer ID-signed if available)
+./package.sh        # -> build/FanCtl-<version>.pkg
+NOTARY_PROFILE=<profile> ./package.sh   # also notarize + staple
 ```
 
-## Use
-
-1. Open `build/FanCtl.app` — a fan icon with the CPU temperature appears in the menu bar.
-   Temperatures and fan speeds work immediately (read-only).
-2. Click **Install Helper…** once and enter your admin password. This installs
-   `fanctld` as a root LaunchDaemon (`/Library/LaunchDaemons/local.fanctl.daemon.plist`);
-   only root can write to the SMC.
-3. Per fan pick **Auto**, **Manual** (fixed RPM) or **Curve** (min speed at the low
-   temperature → max speed at the high one, following CPU or GPU temperature).
-
-The two fans are left/right fans on a shared heat-pipe; by default fan 0 follows the
-CPU and fan 1 the GPU in Curve mode.
+A locally built app can install the helper itself: **Install Helper…** in the panel asks
+for your admin password and installs `fanctld` as a root LaunchDaemon
+(`/Library/LaunchDaemons/local.fanctl.daemon.plist`); only root can write to the SMC.
 
 ## Safety
 
@@ -30,9 +39,12 @@ CPU and fan 1 the GPU in Curve mode.
 
 ## Status
 
-Verified on a MacBookPro16,1 running macOS 26: sensor reading, and manual fan control
-through the helper (`F<n>Md` = 1 plus `F<n>Tg`; fan 0 reached a 3000 rpm target in about
-8 seconds and returned to Auto on `auto 0`).
+- **Intel (verified on MacBookPro16,1, macOS 26):** sensor reading, and manual fan control
+  through the helper (`F<n>Md` = 1 plus `F<n>Tg`; fan 0 reached a 3000 rpm target in about
+  8 seconds and returned to Auto on `auto 0`).
+- **Apple Silicon (untested):** temperatures come from the hottest `Tp*`/`Te*` (CPU) and
+  `Tg*` (GPU) SMC sensors. Manual mode first sets the `Ftst` unlock key, then retries
+  `F<n>Md` for up to 10 seconds while macOS releases the fans.
 
 ## Layout
 

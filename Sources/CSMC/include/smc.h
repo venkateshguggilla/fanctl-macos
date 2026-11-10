@@ -15,5 +15,7 @@ void smc_close(void);
 int smc_key_info(const char *key, smc_keyinfo *info);
 int smc_read(const char *key, smc_keyinfo *info, uint8_t *out32);
 int smc_write(const char *key, const uint8_t *data, uint32_t len);
+// Writes the four-char name of the key at `index` (0..#KEY-1) plus a NUL into out5.
+int smc_key_at(uint32_t index, char *out5);
 
 #endif
